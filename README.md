@@ -31,4 +31,7 @@ docker run --rm -it -v "$HOME/.edgerc:/root/.edgerc:ro" \
   fastdns-to-terraform python fastdns-to-terraform.py zone
 ```
 
+`fastdns-to-terraform.py` prints its output in JSON format. You should pipe it
+through [`json2hcl`](https://github.com/kvz/json2hcl) to convert it to
+[HCL](https://github.com/hashicorp/hcl#why).
 
