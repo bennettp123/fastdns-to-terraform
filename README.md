@@ -9,7 +9,7 @@ A quick and dirty script to dump out a FastDNS zone to terraform `aws_route53_re
 * [edgegrid-python](https://github.com/akamai/AkamaiOPEN-edgegrid-python)
 * [python-terrascript](https://github.com/mjuenema/python-terrascript)
 
-While the code should work on both Python 2 and 3, the terrascript library only works on Python 3.
+While the code should work on both Python 2 and 3, python-terrascript only works on Python 3.
 
 
 # Usage
