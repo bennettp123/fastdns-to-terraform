@@ -23,7 +23,8 @@ fastdns-to-terraform.py zone > zone.tf.json
 Uses the `default` section in `~/.edgerc` for auth. This can be customized using
 `AKAMAI_EDGERC` and `AKAMAI_EDGERC_SECTION`.
 
-To launch it in docker, you'll need to make sure `.edgerc` is preset:
+To launch it in docker, you'll need to make sure `.edgerc` is present in the
+container:
 
 ```
 docker build -t fastdns-to-terraform .
