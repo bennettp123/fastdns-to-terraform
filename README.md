@@ -27,9 +27,9 @@ To launch it in docker, you'll need to make sure `.edgerc` is present in the
 container:
 
 ```
-docker build -t fastdns-to-terraform .
+docker pull bennettp123/fastdns-to-terraform
 docker run --rm -it -v "$HOME/.edgerc:/root/.edgerc:ro" \
-  fastdns-to-terraform python fastdns-to-terraform.py zone
+  bennettp123/fastdns-to-terraform python fastdns-to-terraform.py zone
 ```
 
 `fastdns-to-terraform.py` prints its output in JSON format. You should pipe it
