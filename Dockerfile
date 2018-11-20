@@ -7,4 +7,6 @@ RUN apk add --no-cache \
   && pip install -r requirements.txt \
   && apk del build-base \
   && rm -rf /var/cache/apk/*
+COPY fastdns-to-terraform.py .
+CMD python fastdns-to-terraform.py
 
