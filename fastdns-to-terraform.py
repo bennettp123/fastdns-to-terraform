@@ -27,37 +27,62 @@ edgerc = EdgeRc(edgerc_file)
 baseurl = 'https://{}'.format(edgerc.get(section_name, 'host'))
 
 
-def _GET_JSON_(session, path):
-    return _GET_(session, path).json()
+def _get_json(session, baseurl, path=''):
+    '''Fetch a request and parse the response as json.'''
+    return _get(session, baseurl, path).json()
 
 
-def _GET_(session, path):
+def _get(session, baseurl, path=''):
+    '''Fetch and return a request. Throws on HTTP 4xx or HTTP 5xx.'''
     url = urljoin(baseurl, path)
     response = session.get(url)
     response.raise_for_status()
     return response
 
 
-def get_dns_zone(session, zone):
+def get_dns_zone(session, baseurl, zone):
+    '''Fetch a DNS zone from the FastDNS API. Returns a dict describing the zone.'''
     path = '/config-dns/v1/zones/{}'.format(zone)
-    return _GET_JSON_(session, path)
+    return _get_json(session, baseurl, path)
 
 
-ignored = ('id', 'time', 'version', 'name', 'instance', 'publisher')
+def _make_aws_route53_record_resource(
+        resource_name, zone, rrtype, record_name, records):
+
+    '''Return an aws_route53_record for a zone/rrtype/recordname/records'''
+
+    record_ttl = min(x['ttl'] for x in records)
+    
+    try:
+        record_values = [
+                ' '.join(str(s) for s in (x['priority'], x['target']) if s)
+                for x in records]
+    except KeyError:
+        # 'priority' is only valid for some record types (eg MX)
+        record_values = [x['target'] for x in records]
+
+    return aws_route53_record(resource_name, type=rrtype, name=record_name,
+            zone_id=zone.zone_id, ttl=record_ttl, records=record_values)
+
+
+# FastDNS api smooshes the records and metadata into the same object. We want
+# to remove all of the metadata, and some of the record types too.
+ignored_metadata = ('id', 'time', 'version', 'name', 'instance', 'publisher')
 ignored_rrtypes = ('SOA', 'NSEC3', 'DS', 'DNSKEY', 'NSEC3PARAM')
 
 
 def main():
-
-    parser = argparse.ArgumentParser(
+    argparser = argparse.ArgumentParser(
             description='Fetch FastDNS zone and convert to terraform JSON.')
-    parser.add_argument('zone', help='The zone to fetch from FastDNS')
-    args = parser.parse_args()
+    argparser.add_argument('zone', help='The zone to fetch from FastDNS')
+    args = argparser.parse_args()
 
+    # set up an authenenticated session to the FastDNS API
     session = requests.Session()
     session.auth = EdgeGridAuth.from_edgerc(edgerc, section_name)
 
-    zone_json = get_dns_zone(session, args.zone)
+    # fetch zone from FastDNS
+    zone_json = get_dns_zone(session, baseurl, args.zone)
     zone_name = zone_json['zone']['name']
     
     ts = Terrascript()
@@ -66,10 +91,11 @@ def main():
             name=zone_name)
     ts.add(zone)
 
-    for (rrtype, records) in ((t, r) for (t, r) in zone_json['zone'].items()
-            if not t in ignored):
+    # filter out the keys we don't need, and convert rrtypes to uppercase
+    zone_items = ((t.upper(), r) for (t, r) in zone_json['zone'].items()
+            if not t in ignored_metadata)
 
-        rrtype = rrtype.upper()
+    for (rrtype, records) in zone_items:
 
         if rrtype in ignored_rrtypes:
             logger.debug('ignored record type {}'.format(rrtype))
@@ -85,26 +111,18 @@ def main():
             resource_name = '{}_{}_{}'.format(name, zone_name, rrtype)
             resource_name = resource_name.replace('.', '_')
             record_name = '.'.join(x for x in (name, zone_name) if x)
-            record_ttl = min(x['ttl'] for x in records if x['name'] == name)
 
-            try:
-                record_values = [
-                        ' '.join(
-                            str(s) for s in (x['priority'], x['target']) if s)
-                        for x in records if x['name'] == name]
-            except KeyError:
-                # 'priority' is only valid for some record types (eg MX)
-                record_values = [
-                        x['target']
-                        for x in records if x['name'] == name]
+            current_records = [x for x in records if x['name'] == name]
+            
+            resource = _make_aws_route53_record_resource(
+                    resource_name, zone, rrtype, record_name, current_records)
 
-            ts.add(aws_route53_record(resource_name,
-                type=rrtype, name=record_name, zone_id=zone.zone_id,
-                ttl=record_ttl, records=record_values))
+            ts.add(resource)
 
     print(ts.dump())
 
 
 if __name__ == '__main__':
     main()
+
 
