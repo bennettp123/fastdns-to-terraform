@@ -1,4 +1,4 @@
-FROM python:3-alpine
+FROM python:3.7-alpine
 COPY requirements.txt .
 RUN apk add --no-cache \
     build-base \

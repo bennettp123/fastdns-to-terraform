@@ -6,9 +6,9 @@ A quick and dirty script to dump out a FastDNS zone to terraform
 
 # Requirements
 
-See `requirements.txt`.
-
-Requires Python 3.
+* Python 3 (tested on 3.7)
+* [edgegrid-python](https://github.com/akamai/AkamaiOPEN-edgegrid-python)
+* [python-terrascript](https://github.com/mjuenema/python-terrascript)
 
 While the code should work on both Python 2 and 3, the terrascript library
 only works on Python 3.
@@ -17,7 +17,7 @@ only works on Python 3.
 # Usage
 
 ```
-fastdns-to-terraform.py zone
+fastdns-to-terraform.py zone > zone.tf.json
 ```
 
 Uses the `default` section in `~/.edgerc` for auth. This can be customized using
@@ -30,4 +30,5 @@ docker build -t fastdns-to-terraform .
 docker run --rm -it -v "$HOME/.edgerc:/root/.edgerc:ro" \
   fastdns-to-terraform python fastdns-to-terraform.py zone
 ```
+
 
