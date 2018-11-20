@@ -78,8 +78,8 @@ def main():
         if records:
             if rrtype not in ('A', 'AAAA', 'NS', 'CNAME', 'TXT', 'LOC',
                     'MX', 'HINFO', 'PTR', 'SRV'):
-            logger.warning('unhandled rrtype {}'.format(rrtype))
-            continue
+                logger.warning('unhandled rrtype {}'.format(rrtype))
+                continue
 
         for name in set(x['name'] for x in records):
             resource_name = '{}_{}_{}'.format(name, zone_name, rrtype)
