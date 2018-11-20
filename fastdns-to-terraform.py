@@ -48,6 +48,7 @@ ignored_rrtypes = ('SOA', 'NSEC3', 'DS', 'DNSKEY', 'NSEC3PARAM')
 
 
 def main():
+
     parser = argparse.ArgumentParser(
             description='Fetch FastDNS zone and convert to terraform JSON.')
     parser.add_argument('zone', help='The zone to fetch from FastDNS')
@@ -67,28 +68,36 @@ def main():
 
     for (rrtype, records) in ((t, r) for (t, r) in zone_json['zone'].items()
             if not t in ignored):
+
         rrtype = rrtype.upper()
+
         if rrtype in ignored_rrtypes:
             logger.debug('ignored record type {}'.format(rrtype))
             continue
-        if records and rrtype not in ('A', 'AAAA', 'NS', 'CNAME', 'TXT', 'LOC',
-                'MX', 'HINFO', 'PTR', 'SRV'):
+
+        if records:
+            if rrtype not in ('A', 'AAAA', 'NS', 'CNAME', 'TXT', 'LOC',
+                    'MX', 'HINFO', 'PTR', 'SRV'):
             logger.warning('unhandled rrtype {}'.format(rrtype))
             continue
+
         for name in set(x['name'] for x in records):
             resource_name = '{}_{}_{}'.format(name, zone_name, rrtype)
             resource_name = resource_name.replace('.', '_')
             record_name = '.'.join(x for x in (name, zone_name) if x)
+            record_ttl = min(x['ttl'] for x in records if x['name'] == name)
+
             try:
                 record_values = [
                         ' '.join(
                             str(s) for s in (x['priority'], x['target']) if s)
                         for x in records if x['name'] == name]
             except KeyError:
+                # 'priority' is only valid for some record types (eg MX)
                 record_values = [
                         x['target']
                         for x in records if x['name'] == name]
-            record_ttl = min(x['ttl'] for x in records if x['name'] == name)
+
             ts.add(aws_route53_record(resource_name,
                 type=rrtype, name=record_name, zone_id=zone.zone_id,
                 ttl=record_ttl, records=record_values))
